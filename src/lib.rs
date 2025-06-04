@@ -18,21 +18,29 @@ pub struct Note {
     duration: u16,
 }
 
+/// Maintain a sequence of notes with a current position.
+/// Playback will move forward through the notes, looping.
 pub struct Song<'a> {
+    /// Sequence of notes.
     notes: &'a [Note],
+    /// Current position in sequence.
     position: usize,
 }
 
 impl<'a> Song<'a> {
+    /// Make a new song from a note sequence.
     pub fn new(notes: &'a [Note]) -> Self {
         Self { notes, position: 0 }
     }
 
+    /// Reset playback to the beginning of the song.
     pub fn restart(&mut self) {
         self.position = 0;
     }
 }
 
+/// Hardware being used for game audio,
+/// together with the song being played if any.
 pub struct GameAudio<'a, T, P, S> {
     timer: T,
     pwm: P,
@@ -46,6 +54,7 @@ where
     P: pwm::Instance,
     S: OutputPin,
 {
+    /// Accumulate the needed hardware to play.
     pub fn new(timer: T, pwm: pwm::Pwm<P>, speaker: S) -> Self {
         Self {
             timer,
@@ -55,11 +64,13 @@ where
         }
     }
 
-    pub fn play(&mut self, song: Song<'a>) {
-        self.song = Some(song);
+    /// Start a song playing. Returns any previously-playing song.
+    pub fn play(&mut self, song: Song<'a>) -> Option<Song<'a>> {
+        self.song.replace(song)
     }
 
-    pub fn stop(&mut self) {
-        self.song = None;
+    /// Stop song playback. Returns the playing song in current state.
+    pub fn stop(&mut self) -> Option<Song<'a>> {
+        self.song.take()
     }
 }
