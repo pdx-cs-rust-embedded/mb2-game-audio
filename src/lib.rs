@@ -120,9 +120,8 @@ where
                 self.pwm
                     .set_prescaler(pwm::Prescaler::Div16)
                     .set_counter_mode(pwm::CounterMode::UpAndDown)
-                    .set_max_duty(5000)
                     .set_period(time::Hertz(f))
-                    .set_duty_on_common(2500);
+                    .set_duty_on_common(self.pwm.max_duty() / 2);
                 self.pwm.enable();
             } else {
                 #[cfg(feature = "trace")]
