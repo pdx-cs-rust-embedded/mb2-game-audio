@@ -9,6 +9,7 @@ stopping a background song in a MB2 program.
 
 use keytones::{self, Float};
 use nrf52833_hal::{gpio, pwm, time, timer};
+use rtt_target::rprintln;
 
 /// A note in the song.
 #[derive(Clone, Copy)]
@@ -111,14 +112,18 @@ where
 
             if let Some(k) = note.key {
                 let f = keytones::key_to_frequency(k).round() as u32;
+                rprintln!("{}", f);
                 self.pwm.set_period(time::Hertz(f));
                 self.pwm.enable();
             } else {
                 self.pwm.disable();
             }
 
+            rprintln!("{}", note.duration);
             self.timer.enable_interrupt();
             self.timer.start(note.duration as u32 * 1000);
+
+            rprintln!();
         }
         self.timer.reset_event();
     }

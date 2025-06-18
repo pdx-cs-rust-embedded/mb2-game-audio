@@ -47,7 +47,7 @@ fn main() -> ! {
     pac::NVIC::unpend(pac::Interrupt::TIMER0);
 
     loop {
-        asm::wfe();
+        asm::nop();
     }
 }
 

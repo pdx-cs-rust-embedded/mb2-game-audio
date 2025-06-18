@@ -6,6 +6,8 @@ edition = "2024"
 [dependencies]
 critical-section-lock-mut = "0.1.2"
 nrf52833-hal = "0.18.0"
+rtt-target = "0.6.1"
+panic-rtt-target = "0.2.0"
 
 [dependencies.keytones]
 version = "0.2"
@@ -16,5 +18,3 @@ default-features = false
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core", "inline-asm"] }
 cortex-m-rt = "0.7.5"
 microbit-v2 = "0.15.1"
-panic-rtt-target = "0.2.0"
-rtt-target = "0.6.1"
