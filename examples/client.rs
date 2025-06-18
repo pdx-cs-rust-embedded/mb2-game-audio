@@ -38,7 +38,7 @@ fn main() -> ! {
     let speaker_pin = board.speaker_pin
         .into_push_pull_output(gpio::Level::Low)
         .degrade();
-    let mut game_audio = GameAudio::new(board.TIMER0, board.PWM0, speaker_pin);
+    let game_audio = GameAudio::new(board.TIMER0, board.PWM0, speaker_pin);
     let mut timer = timer::Timer::new(board.TIMER1);
     let song = Song::new(SONG);
     GAME_AUDIO.init(game_audio);

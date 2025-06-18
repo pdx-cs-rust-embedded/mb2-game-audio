@@ -101,6 +101,7 @@ where
 
     /// Stop song playback. Returns the playing song in current state.
     pub fn stop(&mut self) -> Option<Song<'a>> {
+        self.pwm.disable();
         self.timer.disable_interrupt();
         self.song.take()
     }
