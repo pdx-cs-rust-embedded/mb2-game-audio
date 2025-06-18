@@ -7,8 +7,10 @@ stopping a background song in a MB2 program.
 
 #![no_std]
 
+use embedded_hal::digital::OutputPin;
 use keytones::{self, Float};
 use nrf52833_hal::{gpio, pwm, time, timer};
+#[cfg(feature = "trace")]
 use rtt_target::rprintln;
 
 /// A note in the song.
@@ -75,14 +77,10 @@ where
 {
     /// Accumulate the needed hardware to play. Set up the
     /// hardware according to purpose.
-    pub fn new(timer: T, pwm: P, speaker: SpeakerPin) -> Self {
+    pub fn new(timer: T, pwm: P, mut speaker: SpeakerPin) -> Self {
         let pwm = pwm::Pwm::new(pwm);
-        pwm
-            .set_output_pin(pwm::Channel::C0, speaker)
-            .set_prescaler(pwm::Prescaler::Div16)
-            .set_counter_mode(pwm::CounterMode::UpAndDown)
-            .set_max_duty(32767)
-            .set_duty_on_common(32767 / 2);
+        speaker.set_low().unwrap();
+        pwm.set_output_pin(pwm::Channel::C0, speaker);
         pwm.disable();
 
         let timer = timer::Timer::new(timer);
@@ -96,15 +94,20 @@ where
 
     /// Start a song playing. Returns any previously-playing song.
     pub fn play(&mut self, song: Song<'a>) -> Option<Song<'a>> {
-        self.song.replace(song)
+        let result = self.song.replace(song);
+        self.handle_interrupt();
+        result
     }
 
     /// Stop song playback. Returns the playing song in current state.
     pub fn stop(&mut self) -> Option<Song<'a>> {
+        self.timer.disable_interrupt();
         self.song.take()
     }
 
     pub fn handle_interrupt(&mut self) {
+        #[cfg(feature = "trace")]
+        rprintln!("i");
         if let Some(ref mut song) = self.song {
             let p = song.position;
             let note = song.notes[p];
@@ -112,18 +115,25 @@ where
 
             if let Some(k) = note.key {
                 let f = keytones::key_to_frequency(k).round() as u32;
+                #[cfg(feature = "trace")]
                 rprintln!("{}", f);
-                self.pwm.set_period(time::Hertz(f));
+                self.pwm
+                    .set_prescaler(pwm::Prescaler::Div16)
+                    .set_counter_mode(pwm::CounterMode::UpAndDown)
+                    .set_max_duty(5000)
+                    .set_period(time::Hertz(f))
+                    .set_duty_on_common(2500);
                 self.pwm.enable();
             } else {
+                #[cfg(feature = "trace")]
+                rprintln!("r");
                 self.pwm.disable();
             }
 
+            #[cfg(feature = "trace")]
             rprintln!("{}", note.duration);
             self.timer.enable_interrupt();
             self.timer.start(note.duration as u32 * 1000);
-
-            rprintln!();
         }
         self.timer.reset_event();
     }
