@@ -4,6 +4,7 @@
 use panic_rtt_target as _;
 use cortex_m::asm;
 use cortex_m_rt::entry;
+use embedded_hal::delay::DelayNs;
 use microbit::{
     Board,
     hal::{
@@ -23,12 +24,11 @@ type Pwm0 = pwm::Pwm<PWM0>;
 static GAME_AUDIO: LockMut<GameAudio<'static, Timer0, Pwm0>> = LockMut::new();
 
 static SONG: &[Note] = &[
-    Note::note(66, 500),
-    Note::note(68, 500),
-    Note::note(69, 500),
-    Note::note(68, 500),
-    Note::note(66, 500),
     Note::rest(500),
+    Note::note(68, 250),
+    Note::note(69, 250),
+    Note::note(68, 250),
+    Note::note(66, 500),
 ];
 
 #[entry]
@@ -39,12 +39,16 @@ fn main() -> ! {
         .into_push_pull_output(gpio::Level::Low)
         .degrade();
     let mut game_audio = GameAudio::new(board.TIMER0, board.PWM0, speaker_pin);
+    let mut timer = timer::Timer::new(board.TIMER1);
     let song = Song::new(SONG);
-    game_audio.play(song);
     GAME_AUDIO.init(game_audio);
 
     unsafe { pac::NVIC::unmask(pac::Interrupt::TIMER0); }
     pac::NVIC::unpend(pac::Interrupt::TIMER0);
+
+    GAME_AUDIO.with_lock(|ga| { ga.play(song); });
+    timer.delay_ms(10_000);
+    GAME_AUDIO.with_lock(|ga| { ga.stop(); });
 
     loop {
         asm::wfe();
