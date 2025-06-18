@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "autocfg"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+
+[[package]]
 name = "az"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -85,6 +91,15 @@ name = "critical-section"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
+
+[[package]]
+name = "critical-section-lock-mut"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbb9762738c1ef9d31b7586c00c0158d20025a734f9f6905282c1fc5a2e182f0"
+dependencies = [
+ "critical-section",
+]
 
 [[package]]
 name = "crunchy"
@@ -171,11 +186,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "keytones"
+version = "0.2.0"
+source = "git+https://github.com/BartMassey/keytones#f79f5b0b523fed89f56ea7b321945343fde64406"
+dependencies = [
+ "microcheby",
+ "num-traits",
+]
+
+[[package]]
+name = "libm"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
+
+[[package]]
 name = "mb2-game-audio"
 version = "0.1.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
+ "critical-section-lock-mut",
+ "keytones",
  "microbit-v2",
  "nrf52833-hal",
  "panic-rtt-target",
@@ -201,6 +233,12 @@ checksum = "6dbd4bb53d65a8b1a7e133d5d08673e17f39d940f485c2ff9c91350a0ff78958"
 dependencies = [
  "microbit-common",
 ]
+
+[[package]]
+name = "microcheby"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ca271460cbe02d1a3aad03b2a174ca43e3395eaa0ef5fb7cc25887d5491ea27"
 
 [[package]]
 name = "nb"
@@ -270,6 +308,16 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "vcell",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+dependencies = [
+ "autocfg",
+ "libm",
 ]
 
 [[package]]

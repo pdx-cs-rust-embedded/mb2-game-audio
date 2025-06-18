@@ -7,15 +7,33 @@ stopping a background song in a MB2 program.
 
 #![no_std]
 
+use keytones::{self, Float};
 use nrf52833_hal::{gpio, pwm, time, timer};
 
 /// A note in the song.
 #[derive(Clone, Copy)]
 pub struct Note {
-    /// Frequency of note in Hz, or rest.
-    frequency: Option<u16>,
+    /// MIDI key of note, or rest.
+    key: Option<u8>,
     /// Duration of note in ms.
     duration: u16,
+}
+
+impl Note {
+    #[allow(clippy::self_named_constructors)]
+    pub const fn note(key: u8, duration: u16) -> Self {
+        Self {
+            key: Some(key),
+            duration,
+        }
+    }
+
+    pub const fn rest(duration: u16) -> Self {
+        Self {
+            key: None,
+            duration,
+        }
+    }
 }
 
 /// Maintain a sequence of notes with a current position.
@@ -64,6 +82,7 @@ where
             .set_counter_mode(pwm::CounterMode::UpAndDown)
             .set_max_duty(32767)
             .set_duty_on_common(32767 / 2);
+        pwm.disable();
 
         let timer = timer::Timer::new(timer);
 
@@ -90,8 +109,9 @@ where
             let note = song.notes[p];
             song.position = (p + 1) % song.notes.len();
 
-            if let Some(f) = note.frequency {
-                self.pwm.set_period(time::Hertz(f as u32));
+            if let Some(k) = note.key {
+                let f = keytones::key_to_frequency(k).round() as u32;
+                self.pwm.set_period(time::Hertz(f));
                 self.pwm.enable();
             } else {
                 self.pwm.disable();
