@@ -82,10 +82,30 @@ where
     pub fn new(timer: T, pwm: P, mut speaker: SpeakerPin) -> Self {
         let pwm = pwm::Pwm::new(pwm);
         speaker.set_low().unwrap();
-        pwm.set_output_pin(pwm::Channel::C0, speaker);
-        pwm.disable();
 
-        let timer = timer::Timer::new(timer);
+        /* The PWM starts enabled; we need to leave it
+        enabled.
+        
+        We control speaker volume by controlling PWM duty
+        cycle. If the speaker power capacitor is not kept
+        discharged then the first audible signal will be at
+        abnormally high volume regardless of the duty cycle
+        setting, since it will be experiencing the full
+        3.3V from the MB2 power supply.
+
+        By holding the speaker at high duty cycle at a sub sonic
+        frequency, we keep the speaker capacitor near its nominal
+        state during "silences" */
+        pwm
+            .set_output_pin(pwm::Channel::C0, speaker)
+            .set_prescaler(pwm::Prescaler::Div16)
+            .set_counter_mode(pwm::CounterMode::UpAndDown)
+            .set_period(time::Hertz(10))
+            .set_duty_on_common(pwm.max_duty());
+        assert!(pwm.max_duty() > 10);
+
+        let mut timer = timer::Timer::new(timer);
+        timer.enable_interrupt();
 
         Self {
             timer,
@@ -94,23 +114,26 @@ where
         }
     }
 
-    /// Start a song playing. Returns any previously-playing song.
+    /// Start a song playing. Returns any previously-playing
+    /// song in its current state.
     pub fn play(&mut self, song: Song<'a>) -> Option<Song<'a>> {
         let result = self.song.replace(song);
         self.handle_interrupt();
         result
     }
 
-    /// Stop song playback. Returns the playing song in current state.
+    /// Stop song playback. Returns any currently-playing
+    /// song in its current state.
     pub fn stop(&mut self) -> Option<Song<'a>> {
-        self.pwm.disable();
-        self.timer.disable_interrupt();
-        self.song.take()
+        let result = self.song.take();
+        self.handle_interrupt();
+        result
     }
 
     pub fn handle_interrupt(&mut self) {
         #[cfg(feature = "trace")]
         rprintln!("i");
+        let mut silent = true;
         if let Some(ref mut song) = self.song {
             let p = song.position;
             let note = song.notes[p];
@@ -118,26 +141,29 @@ where
 
             if note.volume > 0 {
                 let f = keytones::key_to_frequency(note.key).round() as u32;
+                self.pwm.set_period(time::Hertz(f));
+
                 let v = (1 << note.volume) + 64;
                 let d = self.pwm.max_duty() as u32 * v / 256;
+                self.pwm.set_duty_on_common(d as u16);
+
                 #[cfg(feature = "trace")]
-                rprintln!("{} ({}) {} ({})", note.key, f, note.volume, v);
-                self.pwm
-                    .set_prescaler(pwm::Prescaler::Div16)
-                    .set_counter_mode(pwm::CounterMode::UpAndDown)
-                    .set_period(time::Hertz(f))
-                    .set_duty_on_common(d as u16);
-                self.pwm.enable();
-            } else {
-                #[cfg(feature = "trace")]
-                rprintln!("r");
-                self.pwm.disable();
+                rprintln!("n {} ({}) {} ({})", note.key, f, note.volume, v);
+                silent = false;
             }
 
             #[cfg(feature = "trace")]
             rprintln!("{}", note.duration);
             self.timer.enable_interrupt();
             self.timer.start(note.duration as u32 * 1000);
+        }
+        if silent {
+            #[cfg(feature = "trace")]
+            rprintln!("r");
+            // See the comment elsewhere re speaker volume.
+            self.pwm
+                .set_period(time::Hertz(10))
+                .set_duty_on_common(self.pwm.max_duty());
         }
         self.timer.reset_event();
     }

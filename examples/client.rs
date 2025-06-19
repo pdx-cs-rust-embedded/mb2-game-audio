@@ -23,12 +23,14 @@ type Timer0 = timer::Timer<TIMER0>;
 type Pwm0 = pwm::Pwm<PWM0>;
 static GAME_AUDIO: LockMut<GameAudio<'static, Timer0, Pwm0>> = LockMut::new();
 
+const B: u16 = 1000;
+const V: u8 = 3;
 static SONG: &[Note] = &[
-    Note::rest(500),
-    Note::note(68, 250, 1),
-    Note::note(69, 250, 2),
-    Note::note(68, 250, 3),
-    Note::note(66, 500, 1),
+    Note::rest(B),
+    Note::note(68, B, 1),
+    Note::note(69, B, V),
+    Note::note(68, B, V),
+    Note::note(66, 2*B, V),
 ];
 
 #[entry]
@@ -47,7 +49,7 @@ fn main() -> ! {
     pac::NVIC::unpend(pac::Interrupt::TIMER0);
 
     GAME_AUDIO.with_lock(|ga| { ga.play(song); });
-    timer.delay_ms(10_000);
+    timer.delay_ms(30_000);
     GAME_AUDIO.with_lock(|ga| { ga.stop(); });
 
     loop {
