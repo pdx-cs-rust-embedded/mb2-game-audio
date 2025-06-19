@@ -16,26 +16,28 @@ use rtt_target::rprintln;
 /// A note in the song.
 #[derive(Clone, Copy)]
 pub struct Note {
-    /// MIDI key of note, or rest.
-    key: Option<u8>,
-    /// Duration of note in ms.
+    // MIDI key of note.
+    key: u8,
+    // Volume of note in range 0..=6.
+    volume: u8,
+    // Duration of note in ms.
     duration: u16,
 }
 
 impl Note {
+    /// A note with the given MIDI key number in the range 0
+    /// through 127, given duration in milliseconds, and
+    /// given volume in the range 0 through 6.
     #[allow(clippy::self_named_constructors)]
-    pub const fn note(key: u8, duration: u16) -> Self {
-        Self {
-            key: Some(key),
-            duration,
-        }
+    pub const fn note(key: u8, duration: u16, volume: u8) -> Self {
+        assert!(key < 128);
+        assert!(volume <= 6);
+        Self { key, volume, duration }
     }
 
+    /// A silence of the given duration.
     pub const fn rest(duration: u16) -> Self {
-        Self {
-            key: None,
-            duration,
-        }
+        Self { key: 0, volume: 0, duration }
     }
 }
 
@@ -114,15 +116,17 @@ where
             let note = song.notes[p];
             song.position = (p + 1) % song.notes.len();
 
-            if let Some(k) = note.key {
-                let f = keytones::key_to_frequency(k).round() as u32;
+            if note.volume > 0 {
+                let f = keytones::key_to_frequency(note.key).round() as u32;
+                let v = (1 << note.volume) + 64;
+                let d = self.pwm.max_duty() as u32 * v / 256;
                 #[cfg(feature = "trace")]
-                rprintln!("{}", f);
+                rprintln!("{} ({}) {} ({})", note.key, f, note.volume, v);
                 self.pwm
                     .set_prescaler(pwm::Prescaler::Div16)
                     .set_counter_mode(pwm::CounterMode::UpAndDown)
                     .set_period(time::Hertz(f))
-                    .set_duty_on_common(self.pwm.max_duty() / 2);
+                    .set_duty_on_common(d as u16);
                 self.pwm.enable();
             } else {
                 #[cfg(feature = "trace")]

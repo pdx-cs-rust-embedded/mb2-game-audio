@@ -25,10 +25,10 @@ static GAME_AUDIO: LockMut<GameAudio<'static, Timer0, Pwm0>> = LockMut::new();
 
 static SONG: &[Note] = &[
     Note::rest(500),
-    Note::note(68, 250),
-    Note::note(69, 250),
-    Note::note(68, 250),
-    Note::note(66, 500),
+    Note::note(68, 250, 1),
+    Note::note(69, 250, 2),
+    Note::note(68, 250, 3),
+    Note::note(66, 500, 1),
 ];
 
 #[entry]
