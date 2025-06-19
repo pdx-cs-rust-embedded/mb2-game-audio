@@ -80,29 +80,15 @@ where
     /// Accumulate the needed hardware to play. Set up the
     /// hardware according to purpose.
     pub fn new(timer: T, pwm: P, mut speaker: SpeakerPin) -> Self {
+        // See the comment elsewhere about speaker volume.
+        speaker.set_high().unwrap();
+
         let pwm = pwm::Pwm::new(pwm);
-        speaker.set_low().unwrap();
-
-        /* The PWM starts enabled; we need to leave it
-        enabled.
-        
-        We control speaker volume by controlling PWM duty
-        cycle. If the speaker power capacitor is not kept
-        discharged then the first audible signal will be at
-        abnormally high volume regardless of the duty cycle
-        setting, since it will be experiencing the full
-        3.3V from the MB2 power supply.
-
-        By holding the speaker at high duty cycle at a sub sonic
-        frequency, we keep the speaker capacitor near its nominal
-        state during "silences" */
+        pwm.disable();
         pwm
             .set_output_pin(pwm::Channel::C0, speaker)
             .set_prescaler(pwm::Prescaler::Div16)
-            .set_counter_mode(pwm::CounterMode::UpAndDown)
-            .set_period(time::Hertz(10))
-            .set_duty_on_common(pwm.max_duty());
-        assert!(pwm.max_duty() > 10);
+            .set_counter_mode(pwm::CounterMode::UpAndDown);
 
         let mut timer = timer::Timer::new(timer);
         timer.enable_interrupt();
@@ -147,6 +133,9 @@ where
                 let d = self.pwm.max_duty() as u32 * v / 256;
                 self.pwm.set_duty_on_common(d as u16);
 
+                // Make sure the PWM is enabled.
+                self.pwm.enable();
+
                 #[cfg(feature = "trace")]
                 rprintln!("n {} ({}) {} ({})", note.key, f, note.volume, v);
                 silent = false;
@@ -160,10 +149,25 @@ where
         if silent {
             #[cfg(feature = "trace")]
             rprintln!("r");
-            // See the comment elsewhere re speaker volume.
-            self.pwm
-                .set_period(time::Hertz(10))
-                .set_duty_on_common(self.pwm.max_duty());
+
+            /* We control speaker volume by controlling PWM
+            duty cycle. If the speaker power capacitor is
+            not kept close to discharged then the first
+            audible signal will be at abnormally high volume
+            regardless of the duty cycle setting, since it
+            will be drawing a full 3.3V from the charged
+            capacitor rather than the smaller voltage
+            normally available there while free-running.
+
+            By disabling PWM and holding the speaker pin
+            high during silences we keep the speaker
+            capacitor near its nominal discharged state. */
+            self.pwm.disable();
+            let mut speaker_pin = self.pwm
+                .clear_output_pin(pwm::Channel::C0)
+                .unwrap();
+            speaker_pin.set_high().unwrap();
+            self.pwm.set_output_pin(pwm::Channel::C0, speaker_pin);
         }
         self.timer.reset_event();
     }
