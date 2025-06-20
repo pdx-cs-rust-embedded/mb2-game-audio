@@ -3,6 +3,12 @@ Bart Massey 2025 (version {{version}})
 
 {{readme}}
 
+## Example
+
+```rust
+@include examples/client.rs
+```
+
 ## License
 
 This work is made available under the "Apache 2.0 or MIT
