@@ -1,11 +1,15 @@
-/*!
-## Game audio library crate for the BBC micro:bit v2 (MB2)
-
-This crate currently provides basic support for starting and
-stopping a background song in a MB2 program.
-*/
+/*! This embedded Rust library crate for the MB2 enables looping
+background songs on the MB2 speaker during gameplay. Songs
+are sequences of notes with specified MIDI key number,
+volume and duration. */
 
 #![no_std]
+
+//! ## Example
+//!```
+#![doc = include_str!("../examples/client.rs")]
+//!```
+
 
 use embedded_hal::digital::OutputPin;
 use keytones::{self, Float};
