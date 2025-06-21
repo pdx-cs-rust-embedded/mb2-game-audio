@@ -21,7 +21,7 @@ use critical_section_lock_mut::LockMut;
 
 type Timer0 = timer::Timer<TIMER0>;
 type Pwm0 = pwm::Pwm<PWM0>;
-static GAME_AUDIO: LockMut<GameAudio<'static, Timer0, Pwm0>> = LockMut::new();
+static GAME_AUDIO: LockMut<GameAudio<Timer0, Pwm0>> = LockMut::new();
 
 const B: u16 = 1000;
 const V: u8 = 3;

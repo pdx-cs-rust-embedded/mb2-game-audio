@@ -47,16 +47,18 @@ impl Note {
 
 /// Maintain a sequence of notes with a current position.
 /// Playback will move forward through the notes, looping.
-pub struct Song<'a> {
+pub struct Song {
     /// Sequence of notes.
-    notes: &'a [Note],
+    notes: &'static [Note],
     /// Current position in sequence.
     position: usize,
 }
 
-impl<'a> Song<'a> {
-    /// Make a new song from a note sequence.
-    pub fn new(notes: &'a [Note]) -> Self {
+impl Song {
+    /// Make a new song from a note sequence. The
+    /// sequence has to be `'static`, as it will
+    /// be accessed from an interrupt handler.
+    pub fn new(notes: &'static [Note]) -> Self {
         Self { notes, position: 0 }
     }
 
@@ -68,15 +70,15 @@ impl<'a> Song<'a> {
 
 /// Hardware being used for game audio,
 /// together with the song being played if any.
-pub struct GameAudio<'a, T, P> {
+pub struct GameAudio<T, P> {
     timer: T,
     pwm: P,
-    song: Option<Song<'a>>,
+    song: Option<Song>,
 }
 
 type SpeakerPin = gpio::Pin<gpio::Output<gpio::PushPull>>;
 
-impl<'a, T, P> GameAudio<'a, timer::Timer<T>, pwm::Pwm<P>>
+impl<T, P> GameAudio<timer::Timer<T>, pwm::Pwm<P>>
 where
     T: timer::Instance,
     P: pwm::Instance,
@@ -106,7 +108,7 @@ where
 
     /// Start a song playing. Returns any previously-playing
     /// song in its current state.
-    pub fn play(&mut self, song: Song<'a>) -> Option<Song<'a>> {
+    pub fn play(&mut self, song: Song) -> Option<Song> {
         let result = self.song.replace(song);
         self.handle_interrupt();
         result
@@ -114,7 +116,7 @@ where
 
     /// Stop song playback. Returns any currently-playing
     /// song in its current state.
-    pub fn stop(&mut self) -> Option<Song<'a>> {
+    pub fn stop(&mut self) -> Option<Song> {
         let result = self.song.take();
         self.handle_interrupt();
         result
